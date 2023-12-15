@@ -86,27 +86,32 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		phoneNumber := r.FormValue("phoneNumber")
 		tokenAccountID := r.FormValue("tokenAccountId")
 
+		w.Header().Set("Content-Type", "application/json")
+
 		if !verifyOrder(email, orderID, phoneNumber) {
-			http.Error(w, "Your order could not be found automatically, please contact testnet@fx.land", http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically, please contact testnet@fx.land"})
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if isAccountFunded(tokenAccountID) {
-			http.Error(w, "The account is already funded. If you think this is a mistake please contact testnet@fx.land", http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The account is already funded. If you think this is a mistake please contact testnet@fx.land"})
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		if !fundAccount(tokenAccountID) {
-			http.Error(w, "Account details were found but there was an issue funding the account. Please try again in a few minutes or contact the support at testnet@fx.land", http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Account details were found but there was an issue funding the account. Please try again in a few minutes or contact the support at testnet@fx.land"})
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		saveUserDetails(tokenAccountID)
 		response := map[string]string{"status": "success", "message": "Account is funded successfully"}
-		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	default:
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Invalid request method"})
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
