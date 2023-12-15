@@ -9,7 +9,11 @@
 <body>
     <div class="form-container">
         <img src="/static/logo.png" alt="Logo" class="logo">
-        <form action="/register" method="post">
+        <div class="form-container">
+            <div id="successMessage" class="message success" style="display: none;"></div>
+            <div id="errorMessage" class="message error" style="display: none;"></div>
+            
+            <form id="registerForm" action="/register" method="post">
             <h2>Join Our Testnet</h2>
             <div class="form-group">
                 <label for="email">Email:</label>
@@ -30,5 +34,6 @@
             <button type="submit">Join Testnet</button>
         </form>
     </div>
+    <script src="/static/form-handler.js"></script>
 </body>
 </html>

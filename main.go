@@ -102,7 +102,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		saveUserDetails(tokenAccountID)
-		fmt.Fprintln(w, "Account successfully funded")
+		response := map[string]string{"status": "success", "message": "Account is funded successfully"}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
 	default:
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
