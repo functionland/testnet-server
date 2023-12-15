@@ -71,6 +71,7 @@ func main() {
 	}
 	http.HandleFunc("/register", registerHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
 
