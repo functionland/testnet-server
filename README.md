@@ -7,3 +7,6 @@ Bearer easyship auth
 ```
 
 and then you can build or run it with go
+```go
+go build -o testnet-server .
+```
