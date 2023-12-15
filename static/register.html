@@ -7,12 +7,11 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="form-container">
         <img src="/static/logo.png" alt="Logo" class="logo">
-        <div class="form-container">
-            <div id="successMessage" class="message success" style="display: none;"></div>
-            <div id="errorMessage" class="message error" style="display: none;"></div>
-            
-            <form id="registerForm" action="/register" method="post">
+        <div id="successMessage" class="message success" style="display: none;"></div>
+        <div id="errorMessage" class="message error" style="display: none;"></div>
+        <form id="registerForm" action="/register" method="post">
             <h2>Join Our Testnet</h2>
             <div class="form-group">
                 <label for="email">Email:</label>
