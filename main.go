@@ -3,17 +3,27 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 )
 
 var (
 	seed      string
 	authToken string
 )
+
+type OrderRecord struct {
+	OrderNo       string
+	Email         string
+	ShippingPhone string
+	Amount        float64
+}
 
 type OrderVerificationResponse struct {
 	Shipments []struct {
@@ -44,6 +54,37 @@ const (
 	userDetailFile = "userDetails.txt"
 	fundingAmount  = "1000000000000000000"
 )
+
+// Reads the CSV file and returns a slice of OrderRecords
+func readCSVOrders(filePath string) ([]OrderRecord, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.Comma = '\t' // Set the delimiter to tab if your data is tab-delimited
+	reader.TrimLeadingSpace = true
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var orders []OrderRecord
+	for _, record := range records[1:] { // Skip header row
+		amount, _ := strconv.ParseFloat(strings.Trim(record[10], " $"), 64) // Assuming the Amount is in the 11th column (index 10)
+		orders = append(orders, OrderRecord{
+			OrderNo:       strings.TrimSpace(record[0]),
+			Email:         strings.TrimSpace(record[8]),
+			ShippingPhone: strings.TrimSpace(record[16]),
+			Amount:        amount,
+		})
+	}
+
+	return orders, nil
+}
 
 func readTokensFromFile(filename string) error {
 	file, err := os.Open(filename)
@@ -115,7 +156,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func verifyOrder(email, orderID, phoneNumber string) bool {
+//lint:ignore U1000 will be used in future
+func verifyOrderEasyShip(email, orderID, phoneNumber string) bool {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", easyshipAPIURL+orderID, nil)
 	if err != nil {
@@ -143,6 +185,31 @@ func verifyOrder(email, orderID, phoneNumber string) bool {
 		if shipment.DestinationAddress.ContactEmail == email &&
 			shipment.DestinationAddress.ContactPhone == phoneNumber &&
 			shipment.OrderData.PlatformOrderNumber == orderID {
+			return true
+		}
+	}
+	return false
+}
+
+// Verifies the order by matching the user input against the parsed CSV records
+func verifyOrder(orderID, email, phoneNumber string) bool {
+	orders, err := readCSVOrders("contributions.csv")
+	if err != nil {
+		log.Println("Error reading CSV file:", err)
+		return false
+	}
+
+	// Sanitize the user input
+	sanitizedOrderID := strings.TrimSpace(orderID)
+	sanitizedEmail := strings.TrimSpace(email)
+	sanitizedPhone := strings.TrimSpace(phoneNumber)
+
+	// Search for a matching record
+	for _, order := range orders {
+		if order.OrderNo == sanitizedOrderID &&
+			order.Email == sanitizedEmail &&
+			order.ShippingPhone == sanitizedPhone &&
+			order.Amount > 1 {
 			return true
 		}
 	}
