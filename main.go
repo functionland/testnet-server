@@ -166,9 +166,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !fundAccount(tokenAccountID) {
+		success, errMsg := fundAccount(tokenAccountID)
+		if !success {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Account details were found but there was an issue funding the account. Please try again in a few minutes or contact the support at testnet@fx.land"})
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": errMsg})
 			return
 		}
 
