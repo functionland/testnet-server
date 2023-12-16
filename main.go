@@ -264,11 +264,22 @@ func fundAccount(tokenAccountID string) bool {
 		return false
 	}
 
+	var errorResp FundAccountErrorResponse
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Server responded with non-OK status: %d\n", resp.StatusCode)
 		log.Println("Response body:", string(bodyBytes))
 		log.Panicln(fundRequest)
-		return false
+		errorErr := json.Unmarshal(bodyBytes, &errorResp)
+
+		if errorErr == nil {
+			// If there is no error, then it was an error response
+			log.Printf("Error response from funding API: %+v\n", errorResp)
+			return false
+		} else {
+			// If both decodes failed, there is an issue with the response format
+			log.Printf("Error decoding funding response: %v\n", errorErr)
+			return false
+		}
 	}
 
 	// Print the full response body for debugging
@@ -285,7 +296,7 @@ func fundAccount(tokenAccountID string) bool {
 	}
 
 	// Attempt to decode the response into the error structure
-	var errorResp FundAccountErrorResponse
+
 	errorErr := json.Unmarshal(bodyBytes, &errorResp)
 
 	if errorErr == nil {
