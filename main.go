@@ -237,7 +237,7 @@ func verifyOrder(email, orderID, phoneNumber string) bool {
 	return false
 }
 
-func fundAccount(tokenAccountID string) bool {
+func fundAccount(tokenAccountID string) (bool, string) {
 	client := &http.Client{}
 	fundRequest := FundAccountRequest{
 		Seed:   seed,
@@ -247,13 +247,13 @@ func fundAccount(tokenAccountID string) bool {
 	requestBody, err := json.Marshal(fundRequest)
 	if err != nil {
 		log.Println("Error marshaling request:", err)
-		return false
+		return false, fmt.Sprintf("Error marshaling request: %s", err.Error())
 	}
 
 	resp, err := client.Post(fundAPIURL, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Println("Error sending request to funding API:", err)
-		return false
+		return false, fmt.Sprintf("Error sending request to funding API: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -261,24 +261,23 @@ func fundAccount(tokenAccountID string) bool {
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error reading response body:", err)
-		return false
+		return false, fmt.Sprintf("Error reading response body: %s", err.Error())
 	}
 
 	var errorResp FundAccountErrorResponse
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Server responded with non-OK status: %d\n", resp.StatusCode)
 		log.Println("Response body:", string(bodyBytes))
-		log.Println("Request body:", string(requestBody))
 		errorErr := json.Unmarshal(bodyBytes, &errorResp)
 
 		if errorErr == nil {
 			// If there is no error, then it was an error response
 			log.Printf("Error response from funding API: %+v\n", errorResp)
-			return false
+			return false, fmt.Sprintf("Error response from funding API: %+v", errorResp)
 		} else {
 			// If both decodes failed, there is an issue with the response format
 			log.Printf("Error decoding funding response: %v\n", errorErr)
-			return false
+			return false, fmt.Sprintf("Error decoding funding response: %v", errorErr.Error())
 		}
 	}
 
@@ -292,7 +291,7 @@ func fundAccount(tokenAccountID string) bool {
 	if successErr == nil {
 		// If there is no error, then it was a success response
 		log.Printf("Funding successful: %+v\n", fundResponse)
-		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fmt.Sprintf("%d", fundingAmount)
+		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fmt.Sprintf("%d", fundingAmount), ""
 	}
 
 	// Attempt to decode the response into the error structure
@@ -302,11 +301,11 @@ func fundAccount(tokenAccountID string) bool {
 	if errorErr == nil {
 		// If there is no error, then it was an error response
 		log.Printf("Error response from funding API: %+v\n", errorResp)
-		return false
+		return false, fmt.Sprintf("Error response from funding API: %+v", errorResp)
 	} else {
 		// If both decodes failed, there is an issue with the response format
 		log.Printf("Error decoding funding response: %v\n", errorErr)
-		return false
+		return false, fmt.Sprintf("Error decoding funding response: %v", errorErr.Error())
 	}
 }
 
