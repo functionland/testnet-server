@@ -46,8 +46,13 @@ type FundAccountRequest struct {
 }
 
 type FundAccountResponse struct {
+	From   string `json:"from"`
 	To     string `json:"to"`
 	Amount int64  `json:"amount"`
+}
+type FundAccountErrorResponse struct {
+	Message     string `json:"message"`
+	Description string `json:"description"`
 }
 
 const (
@@ -253,12 +258,34 @@ func fundAccount(tokenAccountID string) bool {
 	defer resp.Body.Close()
 
 	var fundResponse FundAccountResponse
-	if err := json.NewDecoder(resp.Body).Decode(&fundResponse); err != nil {
-		log.Println("Error decoding funding response:", err)
-		return false
+	successErr := json.NewDecoder(resp.Body).Decode(&fundResponse)
+
+	if successErr == nil {
+		// If there is no error, then it was a success response
+		log.Printf("Funding successful: %+v\n", fundResponse)
+		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fundingAmount
 	}
 
-	return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fundingAmount
+	// If the first decode attempt failed, it might be an error response
+	// Since the body has been read, we need to read it again
+	// To do that, we must first close and then re-read the response body
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	resp.Body.Close() // Close the body before re-creating it for the next decoder
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Now, try to decode the response into the error structure
+	var errorResp FundAccountErrorResponse
+	errorErr := json.NewDecoder(resp.Body).Decode(&errorResp)
+
+	if errorErr == nil {
+		// If there is no error, then it was an error response
+		log.Printf("Error response from funding API: %+v\n", errorResp)
+		return false
+	} else {
+		// If both decodes failed, there is an issue with the response format
+		log.Printf("Error decoding funding response: %v\n", errorErr)
+		return false
+	}
 }
 
 func saveUserDetails(tokenAccountID string) {
