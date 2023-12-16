@@ -180,9 +180,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if isAccountFunded(tokenAccountID) {
+		if isAccountFunded(orderID) {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The account is already funded. If you think this is a mistake please contact testnet@fx.land"})
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
 			return
 		}
 
@@ -194,7 +194,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		saveUserDetails(tokenAccountID)
+		saveUserDetails(orderID)
 		response := map[string]string{"status": "success", "message": "Account is funded successfully"}
 		json.NewEncoder(w).Encode(response)
 	default:
@@ -377,7 +377,7 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	}
 }
 
-func saveUserDetails(tokenAccountID string) {
+func saveUserDetails(orderId string) {
 	file, err := os.OpenFile(userDetailFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("Error opening file:", err)
@@ -385,12 +385,12 @@ func saveUserDetails(tokenAccountID string) {
 	}
 	defer file.Close()
 
-	if _, err := file.WriteString(tokenAccountID + "\n"); err != nil {
+	if _, err := file.WriteString(orderId + "\n"); err != nil {
 		log.Println("Error writing to file:", err)
 	}
 }
 
-func isAccountFunded(tokenAccountID string) bool {
+func isAccountFunded(orderId string) bool {
 	file, err := os.Open(userDetailFile)
 	if err != nil {
 		log.Println("Error opening file:", err)
@@ -400,7 +400,7 @@ func isAccountFunded(tokenAccountID string) bool {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		if scanner.Text() == tokenAccountID {
+		if scanner.Text() == orderId {
 			return true
 		}
 	}
