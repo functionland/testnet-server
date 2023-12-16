@@ -268,7 +268,7 @@ func fundAccount(tokenAccountID string) bool {
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Server responded with non-OK status: %d\n", resp.StatusCode)
 		log.Println("Response body:", string(bodyBytes))
-		log.Panicln(fundRequest)
+		log.Println(fundRequest)
 		errorErr := json.Unmarshal(bodyBytes, &errorResp)
 
 		if errorErr == nil {
