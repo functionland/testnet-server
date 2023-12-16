@@ -56,6 +56,11 @@ button:hover {
     background-color: #0056b3;
 }
 
+button:disabled {
+    background-color: #cccccc; /* Grey color for disabled state */
+    cursor: default; /* Change cursor to indicate the button is disabled */
+}
+
 h2 {
     text-align: center;
 }
