@@ -222,7 +222,6 @@ func verifyOrder(email, orderID, phoneNumber string) bool {
 	// Search for a matching record
 	for _, order := range cleanedOrders {
 		if order.OrderNo == sanitizedOrderID {
-			fmt.Printf("verifying  against orderID: %s, email: %s, phoneNumber: %s, amount: %f\n", order.OrderNo, order.Email, order.ShippingPhone, order.Amount)
 			if order.Email == sanitizedEmail &&
 				order.ShippingPhone == sanitizedPhone &&
 				order.Amount > 1 {
