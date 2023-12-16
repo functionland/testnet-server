@@ -41,7 +41,7 @@ type OrderVerificationResponse struct {
 
 type FundAccountRequest struct {
 	Seed   string `json:"seed"`
-	Amount string `json:"amount"`
+	Amount int64  `json:"amount"`
 	To     string `json:"to"`
 }
 
