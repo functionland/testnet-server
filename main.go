@@ -264,6 +264,13 @@ func fundAccount(tokenAccountID string) bool {
 		return false
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Server responded with non-OK status: %d\n", resp.StatusCode)
+		log.Println("Response body:", string(bodyBytes))
+		log.Panicln(fundRequest)
+		return false
+	}
+
 	// Print the full response body for debugging
 	log.Println("Full response body:", string(bodyBytes))
 
