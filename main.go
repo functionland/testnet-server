@@ -264,6 +264,9 @@ func fundAccount(tokenAccountID string) bool {
 		return false
 	}
 
+	// Print the full response body for debugging
+	log.Println("Full response body:", string(bodyBytes))
+
 	// Attempt to decode the response into the success structure
 	var fundResponse FundAccountResponse
 	successErr := json.Unmarshal(bodyBytes, &fundResponse)
