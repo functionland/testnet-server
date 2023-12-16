@@ -17,6 +17,8 @@ import (
 var (
 	seed          string
 	authToken     string
+	apiToken      string
+	accessToken   string
 	cleanedOrders []OrderRecord
 )
 
@@ -53,6 +55,18 @@ type FundAccountResponse struct {
 type FundAccountErrorResponse struct {
 	Message     string `json:"message"`
 	Description string `json:"description"`
+}
+
+type IndiegogoResponse struct {
+	Response []struct {
+		Email string `json:"email"`
+		Order struct {
+			ID       int64 `json:"id"`
+			Shipping struct {
+				PhoneNumber string `json:"phone_number"`
+			} `json:"shipping"`
+		} `json:"order"`
+	} `json:"response"`
 }
 
 const (
@@ -116,6 +130,12 @@ func readTokensFromFile(filename string) error {
 	}
 	if scanner.Scan() {
 		authToken = scanner.Text()
+	}
+	if scanner.Scan() {
+		apiToken = scanner.Text()
+	}
+	if scanner.Scan() {
+		accessToken = scanner.Text()
 	}
 
 	return scanner.Err()
@@ -215,6 +235,53 @@ func verifyOrderEasyShip(email, orderID, phoneNumber string) bool {
 			return true
 		}
 	}
+	return false
+}
+
+//lint:ignore U1000 will be used in future
+func verifyOrderIgg(email, orderID, phoneNumber string) bool {
+	// Prepare the Indiegogo API request
+	client := &http.Client{}
+	indiegogoAPIURL := "https://api.indiegogo.com/2/campaigns/28885449/contributions.json"
+	req, err := http.NewRequest("GET", indiegogoAPIURL, nil)
+	if err != nil {
+		log.Println("Error creating request:", err)
+		return false
+	}
+
+	// Add the required query parameters
+	q := req.URL.Query()
+	q.Add("api_token", apiToken)
+	q.Add("access_token", accessToken)
+	q.Add("email", email) // This will filter the results by the provided email
+	req.URL.RawQuery = q.Encode()
+
+	req.Header.Add("accept", "application/json")
+
+	// Perform the API request
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request to API:", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	// Parse the JSON response
+	var indiegogoResponse IndiegogoResponse
+	if err := json.NewDecoder(resp.Body).Decode(&indiegogoResponse); err != nil {
+		log.Println("Error decoding response:", err)
+		return false
+	}
+
+	// Check if any order matches the provided details
+	for _, contribution := range indiegogoResponse.Response {
+		if contribution.Email == email &&
+			fmt.Sprintf("%d", contribution.Order.ID) == orderID &&
+			contribution.Order.Shipping.PhoneNumber == phoneNumber {
+			return true
+		}
+	}
+
 	return false
 }
 

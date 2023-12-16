@@ -4,6 +4,8 @@ To run the server create a file named .tokens in the same folder as main with th
 ```
 Main funder account seed
 Bearer easyship auth
+api token of Igg
+acces token of igg
 ```
 Create two files:
 - userDetails.txt: which holds the information of users who already joined
