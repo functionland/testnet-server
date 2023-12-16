@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -14,8 +15,9 @@ import (
 )
 
 var (
-	seed      string
-	authToken string
+	seed          string
+	authToken     string
+	cleanedOrders []OrderRecord
 )
 
 type OrderRecord struct {
@@ -55,6 +57,13 @@ const (
 	fundingAmount  = "1000000000000000000"
 )
 
+func preprocessCSVLine(line string) string {
+	// Replace all improperly quoted fields
+	// For example, if the pattern is ="", replace it with the correct format
+	// This is a simple example and might need to be adjusted to handle more complex cases correctly
+	return strings.ReplaceAll(line, "=\"\"\"", "\"")
+}
+
 // Reads the CSV file and returns a slice of OrderRecords
 func readCSVOrders(filePath string) ([]OrderRecord, error) {
 	file, err := os.Open(filePath)
@@ -63,17 +72,21 @@ func readCSVOrders(filePath string) ([]OrderRecord, error) {
 	}
 	defer file.Close()
 
-	reader := csv.NewReader(file)
-	reader.Comma = '\t' // Set the delimiter to tab if your data is tab-delimited
-	reader.TrimLeadingSpace = true
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
 	var orders []OrderRecord
-	for _, record := range records[1:] { // Skip header row
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Preprocess the line to fix any quoting issues
+		processedLine := preprocessCSVLine(line)
+		// Convert the processed line into a reader so it can be used by csv.NewReader
+		reader := csv.NewReader(strings.NewReader(processedLine))
+		record, err := reader.Read()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err // Handle the error as appropriate
+		}
 		amount, _ := strconv.ParseFloat(strings.Trim(record[10], " $"), 64) // Assuming the Amount is in the 11th column (index 10)
 		orders = append(orders, OrderRecord{
 			OrderNo:       strings.TrimSpace(record[0]),
@@ -82,7 +95,6 @@ func readCSVOrders(filePath string) ([]OrderRecord, error) {
 			Amount:        amount,
 		})
 	}
-
 	return orders, nil
 }
 
@@ -102,6 +114,14 @@ func readTokensFromFile(filename string) error {
 	}
 
 	return scanner.Err()
+}
+
+func init() {
+	var err error
+	cleanedOrders, err = readCSVOrders("contributions.csv")
+	if err != nil {
+		log.Fatalf("Error loading orders: %v", err)
+	}
 }
 
 func main() {
@@ -130,23 +150,24 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if !verifyOrder(email, orderID, phoneNumber) {
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically, please contact testnet@fx.land"})
 			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically, please contact testnet@fx.land"})
 			return
 		}
 
 		if isAccountFunded(tokenAccountID) {
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The account is already funded. If you think this is a mistake please contact testnet@fx.land"})
 			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The account is already funded. If you think this is a mistake please contact testnet@fx.land"})
 			return
 		}
 
 		if !fundAccount(tokenAccountID) {
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Account details were found but there was an issue funding the account. Please try again in a few minutes or contact the support at testnet@fx.land"})
 			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Account details were found but there was an issue funding the account. Please try again in a few minutes or contact the support at testnet@fx.land"})
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
 		saveUserDetails(tokenAccountID)
 		response := map[string]string{"status": "success", "message": "Account is funded successfully"}
 		json.NewEncoder(w).Encode(response)
@@ -192,25 +213,21 @@ func verifyOrderEasyShip(email, orderID, phoneNumber string) bool {
 }
 
 // Verifies the order by matching the user input against the parsed CSV records
-func verifyOrder(orderID, email, phoneNumber string) bool {
-	orders, err := readCSVOrders("contributions.csv")
-	if err != nil {
-		log.Println("Error reading CSV file:", err)
-		return false
-	}
-
+func verifyOrder(email, orderID, phoneNumber string) bool {
 	// Sanitize the user input
 	sanitizedOrderID := strings.TrimSpace(orderID)
 	sanitizedEmail := strings.TrimSpace(email)
 	sanitizedPhone := strings.TrimSpace(phoneNumber)
 
 	// Search for a matching record
-	for _, order := range orders {
-		if order.OrderNo == sanitizedOrderID &&
-			order.Email == sanitizedEmail &&
-			order.ShippingPhone == sanitizedPhone &&
-			order.Amount > 1 {
-			return true
+	for _, order := range cleanedOrders {
+		if order.OrderNo == sanitizedOrderID {
+			fmt.Printf("verifying  against orderID: %s, email: %s, phoneNumber: %s, amount: %f\n", order.OrderNo, order.Email, order.ShippingPhone, order.Amount)
+			if order.Email == sanitizedEmail &&
+				order.ShippingPhone == sanitizedPhone &&
+				order.Amount > 1 {
+				return true
+			}
 		}
 	}
 	return false
