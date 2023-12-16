@@ -292,7 +292,7 @@ func fundAccount(tokenAccountID string) bool {
 	if successErr == nil {
 		// If there is no error, then it was a success response
 		log.Printf("Funding successful: %+v\n", fundResponse)
-		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fundingAmount
+		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fmt.Sprintf("%d", fundingAmount)
 	}
 
 	// Attempt to decode the response into the error structure
