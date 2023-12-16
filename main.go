@@ -257,8 +257,16 @@ func fundAccount(tokenAccountID string) bool {
 	}
 	defer resp.Body.Close()
 
+	// Read the response body into a byte slice so it can be reused
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading response body:", err)
+		return false
+	}
+
+	// Attempt to decode the response into the success structure
 	var fundResponse FundAccountResponse
-	successErr := json.NewDecoder(resp.Body).Decode(&fundResponse)
+	successErr := json.Unmarshal(bodyBytes, &fundResponse)
 
 	if successErr == nil {
 		// If there is no error, then it was a success response
@@ -266,16 +274,9 @@ func fundAccount(tokenAccountID string) bool {
 		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fundingAmount
 	}
 
-	// If the first decode attempt failed, it might be an error response
-	// Since the body has been read, we need to read it again
-	// To do that, we must first close and then re-read the response body
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	resp.Body.Close() // Close the body before re-creating it for the next decoder
-	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-	// Now, try to decode the response into the error structure
+	// Attempt to decode the response into the error structure
 	var errorResp FundAccountErrorResponse
-	errorErr := json.NewDecoder(resp.Body).Decode(&errorResp)
+	errorErr := json.Unmarshal(bodyBytes, &errorResp)
 
 	if errorErr == nil {
 		// If there is no error, then it was an error response
