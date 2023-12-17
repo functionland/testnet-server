@@ -2,10 +2,23 @@
 document.addEventListener("DOMContentLoaded", function() {
     var form = document.getElementById('registerForm');
     var submitButton = form.querySelector('button[type="submit"]');
+    var successMessage = document.getElementById('successMessage');
+    var errorMessage = document.getElementById('errorMessage');
+    var verifyingMessage = document.getElementById('verifyingMessage'); // Add an element for this in your HTML
 
     form.addEventListener('submit', function(event) {
         event.preventDefault();
-        submitButton.disabled = true; // Disable the button on submit
+
+        // Clear existing messages
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        // Show verifying message
+        verifyingMessage.innerText = "Verifying the Request. This may take up to 1 minute";
+        verifyingMessage.style.display = 'block';
+
+        // Disable the button
+        submitButton.disabled = true;
 
         var formData = new FormData(form);
         fetch('/register', {
@@ -14,23 +27,22 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
         .then(data => {
+            verifyingMessage.style.display = 'none'; // Hide verifying message
+
             if (data.status === 'success') {
-                document.getElementById('successMessage').innerText = data.message;
-                document.getElementById('successMessage').style.display = 'block';
-                document.getElementById('errorMessage').style.display = 'none';
-                // Do not re-enable the button on success
+                successMessage.innerText = data.message;
+                successMessage.style.display = 'block';
             } else {
-                // If the server responds with a non-success status
-                document.getElementById('errorMessage').innerText = data.message;
-                document.getElementById('errorMessage').style.display = 'block';
-                document.getElementById('successMessage').style.display = 'none';
+                errorMessage.innerText = data.message;
+                errorMessage.style.display = 'block';
                 submitButton.disabled = false; // Re-enable the button on error
             }
         })
         .catch(error => {
-            document.getElementById('errorMessage').innerText = 'Error submitting form: ' + error.message;
-            document.getElementById('errorMessage').style.display = 'block';
-            document.getElementById('successMessage').style.display = 'none';
+            verifyingMessage.style.display = 'none'; // Hide verifying message
+
+            errorMessage.innerText = 'Error submitting form: ' + error.message;
+            errorMessage.style.display = 'block';
             submitButton.disabled = false; // Re-enable the button on fetch failure
         });
     });

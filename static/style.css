@@ -80,3 +80,7 @@ h2 {
 .error {
     background-color: #f44336; /* Red */
 }
+
+#verifyingMessage {
+    background-color: #f0ad4e; /* Example: orange background */
+}
