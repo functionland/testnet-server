@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -180,7 +181,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if isAccountFunded(orderID) {
+		if isOrderFunded(orderID) {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
 			return
@@ -194,7 +195,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		saveUserDetails(orderID)
+		saveUserDetails(orderID, tokenAccountID)
 		response := map[string]string{"status": "success", "message": "Account is funded successfully"}
 		json.NewEncoder(w).Encode(response)
 	default:
@@ -377,7 +378,10 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	}
 }
 
-func saveUserDetails(orderId string) {
+func saveUserDetails(orderID, tokenAccountID string) {
+	timestamp := time.Now().Format(time.RFC3339) // Get current date/time
+	record := fmt.Sprintf("%s, %s, %s\n", timestamp, orderID, tokenAccountID)
+
 	file, err := os.OpenFile(userDetailFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("Error opening file:", err)
@@ -385,12 +389,12 @@ func saveUserDetails(orderId string) {
 	}
 	defer file.Close()
 
-	if _, err := file.WriteString(orderId + "\n"); err != nil {
+	if _, err := file.WriteString(record); err != nil {
 		log.Println("Error writing to file:", err)
 	}
 }
 
-func isAccountFunded(orderId string) bool {
+func isOrderFunded(orderID string) bool {
 	file, err := os.Open(userDetailFile)
 	if err != nil {
 		log.Println("Error opening file:", err)
@@ -400,7 +404,10 @@ func isAccountFunded(orderId string) bool {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		if scanner.Text() == orderId {
+		line := scanner.Text()
+		// Assuming the format is "timestamp, orderID, tokenAccountID"
+		parts := strings.Split(line, ", ")
+		if len(parts) >= 2 && parts[1] == orderID {
 			return true
 		}
 	}
