@@ -72,7 +72,7 @@ type IndiegogoResponse struct {
 
 const (
 	easyshipAPIURL = "https://api.easyship.com/2023-01/shipments?per_page=1&platform_order_number="
-	fundAPIURL     = "http://127.0.0.1:4000/account/fund"
+	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/fund"
 	userDetailFile = "userDetails.txt"
 	fundingAmount  = 1000000000000000000
 )
