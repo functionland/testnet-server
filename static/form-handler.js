@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Automatically fill the tokenAccountId field if accountId is present in the URL
     var accountId = getSearchParams('accountId');
     if (accountId) {
-        tokenAccountIdInput.value = accountId.startsWith('5') ? accountId : '';
+        tokenAccountId.value = accountId.startsWith('5') ? accountId : '';
     }
     form.addEventListener('submit', function(event) {
         event.preventDefault();
