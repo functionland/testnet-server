@@ -6,6 +6,17 @@ document.addEventListener("DOMContentLoaded", function() {
     var errorMessage = document.getElementById('errorMessage');
     var verifyingMessage = document.getElementById('verifyingMessage'); // Add an element for this in your HTML
 
+    // Function to parse URL search parameters
+    function getSearchParams(k) {
+        var p = {};
+        location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(s, k, v) { p[k] = v });
+        return k ? p[k] : p;
+    }
+    // Automatically fill the tokenAccountId field if accountId is present in the URL
+    var accountId = getSearchParams('accountId');
+    if (accountId) {
+        tokenAccountIdInput.value = accountId.startsWith('5') ? accountId : '';
+    }
     form.addEventListener('submit', function(event) {
         event.preventDefault();
 
