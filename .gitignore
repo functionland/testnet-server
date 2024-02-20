@@ -24,3 +24,4 @@ go.work
 .tokens
 contributions.csv
 userDetails.txt
+*.key
