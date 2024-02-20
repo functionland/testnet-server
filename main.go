@@ -70,12 +70,85 @@ type IndiegogoResponse struct {
 	} `json:"response"`
 }
 
+type BalanceRequest struct {
+	Account string `json:"account"`
+}
+
+type BalanceResponse struct {
+	Balance int64 `json:"balance"`
+}
+
+type BalanceErrorResponse struct {
+	Message     string `json:"message"`
+	Description string `json:"description"`
+}
+
+// EmailRequest represents the JSON payload structure for the Brevo API request
+type EmailRequest struct {
+	Sender      Sender    `json:"sender"`
+	To          []ToEmail `json:"to"`
+	Subject     string    `json:"subject"`
+	HtmlContent string    `json:"htmlContent"`
+}
+
+// Sender represents the "sender" part of the payload
+type Sender struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// ToEmail represents each recipient in the "to" array
+type ToEmail struct {
+	Email string `json:"email"`
+	Name  string `json:"name"` // This can be an empty string if the name is not used
+}
+
 const (
 	easyshipAPIURL = "https://api.easyship.com/2023-01/shipments?per_page=1&platform_order_number="
 	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/fund"
+	balanceAPIURL  = "https://api.node3.functionyard.fula.network/account/balance"
 	userDetailFile = "userDetails.txt"
-	fundingAmount  = 1000000000000000000
+	fundingAmount  = 4000000000000000000
 )
+
+func checkAccountBalance(accountID string) (int64, error) {
+	client := &http.Client{}
+	balanceRequest := BalanceRequest{
+		Account: accountID,
+	}
+	requestBody, err := json.Marshal(balanceRequest)
+	if err != nil {
+		log.Println("Error marshaling balance request:", err)
+		return 0, err
+	}
+
+	resp, err := client.Post(balanceAPIURL, "application/json", bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Println("Error sending balance request:", err)
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading balance response body:", err)
+		return 0, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Balance check response body:", string(bodyBytes))
+		return 0, fmt.Errorf("balance check failed with status code: %d", resp.StatusCode)
+	}
+
+	var balanceResp BalanceResponse
+	err = json.Unmarshal(bodyBytes, &balanceResp)
+	if err != nil {
+		log.Println("Error decoding balance response:", err)
+		return 0, err
+	}
+
+	return balanceResp.Balance, nil
+}
 
 func preprocessCSVLine(line string) string {
 	// Replace all improperly quoted fields
@@ -162,6 +235,89 @@ func main() {
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
 
+func readAPIKey(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read API key from file: %v", err)
+	}
+	return string(data), nil
+}
+
+func sendEmailDetails(toEmail string, orderID string, phoneNumber string, orderAmount float64) error {
+	apiKey, err := readAPIKey("/home/functionland/testnet-server/brevo.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	apiURL := "https://api.brevo.com/v3/smtp/email"
+
+	// Construct the HTML content
+	htmlContent := fmt.Sprintf(`
+		<html><head></head><body>
+		<p>Hello,</p>
+		<p>Thank you for your request to join our network. Here are the details of your order in the system:</p>
+		<ul>
+			<li>Order ID: %s</li>
+			<li>Phone Number: %s</li>
+			<li>Order Amount: %.2f</li>
+		</ul>
+		<p>Please double check what you entered on the join request.</p>
+		</body></html>
+	`, orderID, phoneNumber, orderAmount)
+
+	// Prepare the request payload
+	emailRequest := EmailRequest{
+		Sender: Sender{
+			Name:  "Functionyard",              // Updated sender name
+			Email: "functionyard@fula.network", // Updated sender email
+		},
+		To: []ToEmail{
+			{
+				Email: toEmail,
+			},
+		},
+		Subject:     "Your Join Network Request", // Updated subject
+		HtmlContent: htmlContent,
+	}
+
+	// Marshal the payload to JSON
+	payloadBytes, err := json.Marshal(emailRequest)
+	if err != nil {
+		return fmt.Errorf("error marshaling payload to JSON: %v", err)
+	}
+
+	// Create a new HTTP POST request
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set the necessary headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("api-key", apiKey)
+
+	// Make the request using the default HTTP client
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending request to email API: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API responded with non-OK status: %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	log.Println("Email sent successfully")
+	return nil
+}
+
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -174,10 +330,13 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		tokenAccountID := r.FormValue("tokenAccountId")
 
 		w.Header().Set("Content-Type", "application/json")
-
-		if !verifyOrder(email, orderID, phoneNumber) {
+		orderFound, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount := verifyOrder(email, orderID, phoneNumber)
+		if !orderFound {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically, please contact testnet@fx.land"})
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically or does not match what we have in our system. If your email is in the system you will shortly receive an email with registered order details. You can also contact testnet@fx.land"})
+			if emailFound {
+				sendEmailDetails(email, foundOrderNo, foundShippingPhone, foundOrderAmount)
+			}
 			return
 		}
 
@@ -189,9 +348,14 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 		success, errMsg := fundAccount(tokenAccountID)
 		if !success {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": errMsg})
-			return
+			balance, err := checkAccountBalance(tokenAccountID)
+			if err == nil && balance > 0 {
+				log.Println("Account has a positive balance, considering funding successful")
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": errMsg})
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -287,23 +451,30 @@ func verifyOrderIgg(email, orderID, phoneNumber string) bool {
 }
 
 // Verifies the order by matching the user input against the parsed CSV records
-func verifyOrder(email, orderID, phoneNumber string) bool {
-	// Sanitize the user input
+func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string, float64) {
 	sanitizedOrderID := strings.TrimSpace(orderID)
 	sanitizedEmail := strings.TrimSpace(email)
 	sanitizedPhone := strings.TrimSpace(phoneNumber)
 
-	// Search for a matching record
+	emailFound := false
+	foundOrderNo := ""
+	foundShippingPhone := ""
+	foundOrderAmount, _ := strconv.ParseFloat("0", 64)
+
 	for _, order := range cleanedOrders {
-		if order.OrderNo == sanitizedOrderID {
-			if order.Email == sanitizedEmail &&
-				order.ShippingPhone == sanitizedPhone &&
+		if strings.EqualFold(order.Email, sanitizedEmail) {
+			emailFound = true // Email matches.
+			foundOrderNo = order.OrderNo
+			foundShippingPhone = order.ShippingPhone
+			foundOrderAmount = order.Amount
+			if strings.EqualFold(order.OrderNo, sanitizedOrderID) &&
+				strings.EqualFold(order.ShippingPhone, sanitizedPhone) &&
 				order.Amount > 1 {
-				return true
+				return true, true, foundOrderNo, foundShippingPhone, foundOrderAmount // Full match.
 			}
 		}
 	}
-	return false
+	return false, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount // Full match not found, return status of email match.
 }
 
 func fundAccount(tokenAccountID string) (bool, string) {
