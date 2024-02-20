@@ -251,6 +251,10 @@ func sendEmailDetails(toEmail string, orderID string, phoneNumber string, orderA
 
 	apiURL := "https://api.brevo.com/v3/smtp/email"
 
+	// Split the email address at "@" and use the first part as the name
+	emailParts := strings.Split(toEmail, "@")
+	namePart := emailParts[0] // The part before "@"
+
 	// Construct the HTML content
 	htmlContent := fmt.Sprintf(`
 		<html><head></head><body>
@@ -274,6 +278,7 @@ func sendEmailDetails(toEmail string, orderID string, phoneNumber string, orderA
 		To: []ToEmail{
 			{
 				Email: toEmail,
+				Name:  namePart,
 			},
 		},
 		Subject:     "Your Join Network Request", // Updated subject
