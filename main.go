@@ -335,7 +335,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically or does not match what we have in our system. If your email is in the system you will shortly receive an email with registered order details. You can also contact testnet@fx.land"})
 			if emailFound {
-				sendEmailDetails(email, foundOrderNo, foundShippingPhone, foundOrderAmount)
+				err := sendEmailDetails(email, foundOrderNo, foundShippingPhone, foundOrderAmount)
+				log.Println("Email sending result")
+				log.Println(err)
 			}
 			return
 		}
