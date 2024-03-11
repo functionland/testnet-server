@@ -12,7 +12,7 @@ Create two files:
 
 `Date and Time of getting funded`, `contribution ID`, `Aura account`
 
-- `contributions.csv`: which holds the details of contributions. You can export it from Indiegogo or create it manually. When contributing to `contributions.csv`, please ensure your file includes the following fields:
+- `contributions-masked.csv`: which holds the details of contributions. You can export it from Indiegogo or create it manually. When contributing to `contributions.csv`, please ensure your file includes the following fields:
 
 | Order No. | Email | Amount | Shipping Phone Number (Masked to the last 4 digist only for security) |
 |-----------|-----------|-------------|---------------------|

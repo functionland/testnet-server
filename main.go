@@ -217,7 +217,7 @@ func readTokensFromFile(filename string) error {
 
 func init() {
 	var err error
-	cleanedOrders, err = readCSVOrders("contributions.csv")
+	cleanedOrders, err = readCSVOrders("contributions-masked.csv")
 	if err != nil {
 		log.Fatalf("Error loading orders: %v", err)
 	}
