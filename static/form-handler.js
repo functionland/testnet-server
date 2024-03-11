@@ -1,29 +1,40 @@
-// form-handler.js
 document.addEventListener("DOMContentLoaded", function() {
-    var form = document.getElementById('registerForm');
-    var submitButton = form.querySelector('button[type="submit"]');
-    var successMessage = document.getElementById('successMessage');
-    var errorMessage = document.getElementById('errorMessage');
-    var verifyingMessage = document.getElementById('verifyingMessage'); // Add an element for this in your HTML
+    let form = document.getElementById('registerForm');
+    let submitButton = form.querySelector('button[type="submit"]');
+    let successMessage = document.getElementById('successMessage');
+    let errorMessage = document.getElementById('errorMessage');
+    let verifyingMessage = document.getElementById('verifyingMessage');
+    let appIdSelect = document.getElementById('appId'); // Get the appId select element
 
     // Function to parse URL search parameters
     function getSearchParams(k) {
-        var p = {};
+        let p = {};
         location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(s, k, v) { p[k] = v });
         return k ? p[k] : p;
     }
-    // Automatically fill the tokenAccountId field if accountId is present in the URL
-    var accountId = getSearchParams('accountId');
-    if (accountId) {
-        tokenAccountId.value = accountId.startsWith('5') ? accountId : '';
+
+    // Automatically set the appId field based on URL parameter or default to "main"
+    let appIdParam = getSearchParams('appId');
+    let validAppIds = ['land.fx.fotos', 'land.fx.blox', 'main']; // List of valid appIds
+    if (appIdParam && validAppIds.includes(appIdParam)) {
+        appIdSelect.value = appIdParam;
+    } else {
+        appIdSelect.value = 'main'; // Default to 'main' if not valid or not present
     }
+
+    // Automatically fill the tokenAccountId field if accountId is present in the URL
+    let accountId = getSearchParams('accountId');
+    if (accountId) {
+        form.tokenAccountId.value = accountId.startsWith('5') ? accountId : '';
+    }
+
     form.addEventListener('submit', function(event) {
         event.preventDefault();
 
         // Clear existing messages
         successMessage.style.display = 'none';
         errorMessage.style.display = 'none';
-        
+
         // Show verifying message
         verifyingMessage.innerText = "Verifying the Request. This may take up to 1 minute";
         verifyingMessage.style.display = 'block';
@@ -31,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // Disable the button
         submitButton.disabled = true;
 
-        var formData = new FormData(form);
+        let formData = new FormData(form);
         fetch('/register', {
             method: 'POST',
             body: formData

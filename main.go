@@ -333,6 +333,23 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		orderID := r.FormValue("orderId")
 		phoneNumber := r.FormValue("phoneNumber")
 		tokenAccountID := r.FormValue("tokenAccountId")
+		appId := r.FormValue("appId")
+
+		// Validate appId against the allowed list
+		allowedAppIds := []string{"land.fx.fotos", "land.fx.blox", "main"}
+		appIdValid := false
+		for _, a := range allowedAppIds {
+			if appId == a {
+				appIdValid = true
+				break
+			}
+		}
+
+		if !appIdValid {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Invalid appId provided"})
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		orderFound, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount := verifyOrder(email, orderID, phoneNumber)
@@ -347,7 +364,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if isOrderFunded(orderID) {
+		if isOrderFunded(orderID, appId) {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
 			return
@@ -366,7 +383,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		saveUserDetails(orderID, tokenAccountID)
+		saveUserDetails(orderID, tokenAccountID, appId)
 		response := map[string]string{"status": "success", "message": "Account is funded successfully"}
 		json.NewEncoder(w).Encode(response)
 	default:
@@ -556,9 +573,10 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	}
 }
 
-func saveUserDetails(orderID, tokenAccountID string) {
+func saveUserDetails(orderID, tokenAccountID, appId string) {
 	timestamp := time.Now().Format(time.RFC3339) // Get current date/time
-	record := fmt.Sprintf("%s, %s, %s\n", timestamp, orderID, tokenAccountID)
+	// Include appId in the record format
+	record := fmt.Sprintf("%s, %s, %s, %s\n", timestamp, orderID, tokenAccountID, appId)
 
 	file, err := os.OpenFile(userDetailFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -572,7 +590,7 @@ func saveUserDetails(orderID, tokenAccountID string) {
 	}
 }
 
-func isOrderFunded(orderID string) bool {
+func isOrderFunded(orderID, appId string) bool {
 	file, err := os.Open(userDetailFile)
 	if err != nil {
 		log.Println("Error opening file:", err)
@@ -583,9 +601,9 @@ func isOrderFunded(orderID string) bool {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		// Assuming the format is "timestamp, orderID, tokenAccountID"
+		// Update parts length check for new format: "timestamp, orderID, tokenAccountID, appId"
 		parts := strings.Split(line, ", ")
-		if len(parts) >= 2 && parts[1] == orderID {
+		if len(parts) >= 3 && parts[1] == orderID && parts[3] == appId {
 			return true
 		}
 	}

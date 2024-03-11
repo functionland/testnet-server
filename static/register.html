@@ -28,12 +28,19 @@
                 <label for="tokenAccountId">Token Account ID:</label>
                 <input type="text" id="tokenAccountId" name="tokenAccountId" required>
             </div>
+            <div class="form-group">
+                <label for="appId">App ID:</label>
+                <select id="appId" name="appId" required>
+                    <option value="main">Blox Account</option>
+                    <option value="land.fx.fotos">FxFotos</option>
+                    <option value="land.fx.blox">FxBlox</option>
+                </select>
+            </div>
             <button type="submit">Join Testnet</button>
         </form>
         <div id="successMessage" class="message success" style="display: none;"></div>
         <div id="errorMessage" class="message error" style="display: none;"></div>
         <div id="verifyingMessage" class="message" style="display: none;"></div>
-
     </div>
     <script src="/static/form-handler.js"></script>
 </body>
