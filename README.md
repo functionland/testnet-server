@@ -24,3 +24,31 @@ In the same folder and then you can build or run it with go
 go build -o testnet-server .
 testnet-server
 ```
+
+and then an example service file `/etc/systemd/system/testnet-server.service` is like:
+
+```
+[Unit]
+Description=Testnet Server
+
+[Service]
+TimeoutStartSec=0
+Type=simple
+User=root
+WorkingDirectory=/home/${USER}/testnet-server
+ExecStart=/home/${USER}/testnet-server/testnet-server
+Restart=always
+StandardOutput=file:/var/log/testnet-server.log
+StandardError=file:/var/log/testnet-server.err
+
+[Install]
+WantedBy=multi-user.target
+```
+
+And then run:
+
+```
+sudo systemctl daemon-reload
+
+systemctl enable testnet-server
+```
