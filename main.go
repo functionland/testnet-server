@@ -180,11 +180,11 @@ func readCSVOrders(filePath string) ([]OrderRecord, error) {
 			}
 			return nil, err // Handle the error as appropriate
 		}
-		amount, _ := strconv.ParseFloat(strings.Trim(record[10], " $"), 64) // Assuming the Amount is in the 11th column (index 10)
+		amount, _ := strconv.ParseFloat(strings.Trim(record[2], " $"), 64) // Assuming the Amount is in the 11th column (index 10)
 		orders = append(orders, OrderRecord{
 			OrderNo:       strings.TrimSpace(record[0]),
-			Email:         strings.TrimSpace(record[8]),
-			ShippingPhone: strings.TrimSpace(record[16]),
+			Email:         strings.TrimSpace(record[1]),
+			ShippingPhone: strings.TrimSpace(record[3]),
 			Amount:        amount,
 		})
 	}
@@ -479,6 +479,11 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 	sanitizedOrderID := strings.TrimSpace(orderID)
 	sanitizedEmail := strings.TrimSpace(email)
 	sanitizedPhone := strings.TrimSpace(phoneNumber)
+	if len(sanitizedPhone) < 4 {
+		// Handle error or adjust logic as necessary
+		return false, false, "", "", 0.0
+	}
+	sanitizedPhoneLast4 := sanitizedPhone[len(sanitizedPhone)-4:]
 
 	emailFound := false
 	foundOrderNo := ""
@@ -489,10 +494,13 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 		if strings.EqualFold(order.Email, sanitizedEmail) {
 			emailFound = true // Email matches.
 			foundOrderNo = order.OrderNo
-			foundShippingPhone = order.ShippingPhone
 			foundOrderAmount = order.Amount
+			if len(order.ShippingPhone) < 4 {
+				continue
+			}
+			orderPhoneLast4 := order.ShippingPhone[len(order.ShippingPhone)-4:]
 			if strings.EqualFold(order.OrderNo, sanitizedOrderID) &&
-				strings.EqualFold(order.ShippingPhone, sanitizedPhone) &&
+				strings.EqualFold(orderPhoneLast4, sanitizedPhoneLast4) &&
 				order.Amount > 1 {
 				return true, true, foundOrderNo, foundShippingPhone, foundOrderAmount // Full match.
 			}

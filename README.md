@@ -14,8 +14,8 @@ Create two files:
 
 - `contributions.csv`: which holds the details of contributions. You can export it from Indiegogo or create it manually. When contributing to `contributions.csv`, please ensure your file includes the following fields:
 
-| Order No. | Pledge ID | Referrer ID | Fulfillment Status | Funding Date | Payment Method | Appearance | Name | Email | Amount | Shipping Fees | Platform Fee | Transaction Fee | Perk ID | Perk | Shipping Name | Shipping Phone Number | Shipping Address | Shipping Address 2 | Shipping City | Shipping State/Province | Shipping Zip/Postal Code | Shipping Country | Carrier | Tracking Number | Item Name | Item SKU | Option 1 | Option 2 | Option 3 | Item Name | Item SKU | Option 1 | Option 2 | Option 3 | Item Name | Item SKU | Option 1 | Option 2 | Option 3 | Item Name | Item SKU | Option 1 | Option 2 | Option 3 |
-|-----------|-----------|-------------|---------------------|--------------|----------------|------------|------|-------|--------|---------------|--------------|-----------------|---------|------|----------------|-----------------------|-------------------|---------------------|---------------|-------------------------|--------------------------|------------------|---------|----------------|-----------|----------|----------|----------|----------|-----------|----------|----------|----------|----------|-----------|----------|----------|----------|----------|-----------|----------|----------|----------|----------|
+| Order No. | Email | Amount | Shipping Phone Number (Masked to the last 4 digist only for security) |
+|-----------|-----------|-------------|---------------------|
 
 Please make sure each entry is correctly placed under the corresponding column header.
 
