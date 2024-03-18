@@ -494,6 +494,7 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 		if strings.EqualFold(order.Email, sanitizedEmail) {
 			emailFound = true // Email matches.
 			foundOrderNo = order.OrderNo
+			foundShippingPhone = order.ShippingPhone
 			foundOrderAmount = order.Amount
 			if len(order.ShippingPhone) < 4 {
 				continue
