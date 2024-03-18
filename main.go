@@ -244,7 +244,7 @@ func readAPIKey(filePath string) (string, error) {
 }
 
 func sendEmailDetails(toEmail string, orderID string, phoneNumber string, orderAmount float64) error {
-	apiKey, err := readAPIKey("/home/functionland/testnet-server/brevo.key")
+	apiKey, err := readAPIKey("/home/ubuntu/testnet-server/brevo.key")
 	if err != nil {
 		log.Fatal(err)
 	}
