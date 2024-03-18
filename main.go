@@ -27,7 +27,7 @@ type OrderRecord struct {
 	OrderNo       string
 	Email         string
 	ShippingPhone string
-	Amount        float64
+	Amount        string
 }
 
 type OrderVerificationResponse struct {
@@ -495,14 +495,14 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 			emailFound = true // Email matches.
 			foundOrderNo = order.OrderNo
 			foundShippingPhone = order.ShippingPhone
-			foundOrderAmount = order.Amount
+			foundOrderAmount, _ = strconv.ParseFloat(order.Amount, 64)
 			if len(order.ShippingPhone) < 4 {
 				continue
 			}
 			orderPhoneLast4 := order.ShippingPhone[len(order.ShippingPhone)-4:]
 			if strings.EqualFold(order.OrderNo, sanitizedOrderID) &&
 				strings.EqualFold(orderPhoneLast4, sanitizedPhoneLast4) &&
-				order.Amount > 1 {
+				foundOrderAmount > 1 {
 				return true, true, foundOrderNo, foundShippingPhone, foundOrderAmount // Full match.
 			}
 		}
