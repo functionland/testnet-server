@@ -27,7 +27,7 @@ type OrderRecord struct {
 	OrderNo       string
 	Email         string
 	ShippingPhone string
-	Amount        string
+	Amount        float64
 }
 
 type OrderVerificationResponse struct {
@@ -180,7 +180,8 @@ func readCSVOrders(filePath string) ([]OrderRecord, error) {
 			}
 			return nil, err // Handle the error as appropriate
 		}
-		amount, _ := strconv.ParseFloat(strings.Trim(record[2], " $"), 64) // Assuming the Amount is in the 11th column (index 10)
+		cleanedAmount := strings.Replace(strings.Trim(record[2], " $"), ",", "", -1)
+		amount, _ := strconv.ParseFloat(cleanedAmount, 64) // Assuming the Amount is in the 11th column (index 10)
 		orders = append(orders, OrderRecord{
 			OrderNo:       strings.TrimSpace(record[0]),
 			Email:         strings.TrimSpace(record[1]),
@@ -495,14 +496,14 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 			emailFound = true // Email matches.
 			foundOrderNo = order.OrderNo
 			foundShippingPhone = order.ShippingPhone
-			foundOrderAmount, _ = strconv.ParseFloat(order.Amount, 64)
+			foundOrderAmount = order.Amount
 			if len(order.ShippingPhone) < 4 {
 				continue
 			}
 			orderPhoneLast4 := order.ShippingPhone[len(order.ShippingPhone)-4:]
 			if strings.EqualFold(order.OrderNo, sanitizedOrderID) &&
 				strings.EqualFold(orderPhoneLast4, sanitizedPhoneLast4) &&
-				foundOrderAmount > 1 {
+				order.Amount > 1 {
 				return true, true, foundOrderNo, foundShippingPhone, foundOrderAmount // Full match.
 			}
 		}
