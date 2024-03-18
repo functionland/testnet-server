@@ -7,7 +7,7 @@ Bearer easyship auth
 api token of Igg
 acces token of igg
 ```
-Create three files:
+Create four files:
 - `userDetails.txt`: which holds the information of users who already joined. Initial an empty file by `touch userDetails.txt`. The format of the saved file is a simple txt with below information:
 
 `Date and Time of getting funded`, `contribution ID`, `Aura account`
@@ -18,6 +18,7 @@ Create three files:
 |-----------|-----------|-------------|---------------------|
 
 - `.tokens` : the first line of this file holds the seed to an account with enough funds to execute join requests and fund them with gas token
+- `brevo.key` this contains the API key for email server
 
 Please make sure each entry is correctly placed under the corresponding column header.
 
