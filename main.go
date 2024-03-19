@@ -105,10 +105,10 @@ type ToEmail struct {
 
 const (
 	easyshipAPIURL = "https://api.easyship.com/2023-01/shipments?per_page=1&platform_order_number="
-	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/fund"
+	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/set_balance"
 	balanceAPIURL  = "https://api.node3.functionyard.fula.network/account/balance"
 	userDetailFile = "userDetails.txt"
-	fundingAmount  = 4000000000000000000
+	fundingAmount  = 99999999999999999999999999999
 )
 
 func checkAccountBalance(accountID string) (int64, error) {
