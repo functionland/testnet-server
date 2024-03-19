@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
@@ -43,15 +44,14 @@ type OrderVerificationResponse struct {
 }
 
 type FundAccountRequest struct {
-	Seed   string `json:"seed"`
-	Amount int64  `json:"amount"`
-	To     string `json:"to"`
+	Seed   string  `json:"seed"`
+	Amount big.Int `json:"amount"`
+	To     string  `json:"to"`
 }
 
 type FundAccountResponse struct {
-	From   string `json:"from"`
-	To     string `json:"to"`
-	Amount int64  `json:"amount"`
+	Account string  `json:"account"`
+	Amount  big.Int `json:"amount"`
 }
 type FundAccountErrorResponse struct {
 	Message     string `json:"message"`
@@ -75,7 +75,7 @@ type BalanceRequest struct {
 }
 
 type BalanceResponse struct {
-	Balance int64 `json:"balance"`
+	Balance big.Int `json:"balance"`
 }
 
 type BalanceErrorResponse struct {
@@ -108,10 +108,11 @@ const (
 	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/set_balance"
 	balanceAPIURL  = "https://api.node3.functionyard.fula.network/account/balance"
 	userDetailFile = "userDetails.txt"
-	fundingAmount  = 999999999999999999999999999999
 )
 
-func checkAccountBalance(accountID string) (int64, error) {
+var fundingAmount *big.Int
+
+func checkAccountBalance(accountID string) (string, error) {
 	client := &http.Client{}
 	balanceRequest := BalanceRequest{
 		Account: accountID,
@@ -119,35 +120,35 @@ func checkAccountBalance(accountID string) (int64, error) {
 	requestBody, err := json.Marshal(balanceRequest)
 	if err != nil {
 		log.Println("Error marshaling balance request:", err)
-		return 0, err
+		return "0", err
 	}
 
 	resp, err := client.Post(balanceAPIURL, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Println("Error sending balance request:", err)
-		return 0, err
+		return "0", err
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Error reading balance response body:", err)
-		return 0, err
+		return "0", err
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Balance check response body:", string(bodyBytes))
-		return 0, fmt.Errorf("balance check failed with status code: %d", resp.StatusCode)
+		return "0", fmt.Errorf("balance check failed with status code: %d", resp.StatusCode)
 	}
 
 	var balanceResp BalanceResponse
 	err = json.Unmarshal(bodyBytes, &balanceResp)
 	if err != nil {
 		log.Println("Error decoding balance response:", err)
-		return 0, err
+		return "0", err
 	}
 
-	return balanceResp.Balance, nil
+	return balanceResp.Balance.String(), nil
 }
 
 func preprocessCSVLine(line string) string {
@@ -226,6 +227,7 @@ func init() {
 
 func main() {
 	fmt.Print("Server Started")
+	fundingAmount, _ = new(big.Int).SetString("999999999999999999999999999999", 10)
 	err := readTokensFromFile(".tokens")
 	if err != nil {
 		log.Fatalf("Error reading tokens: %v", err)
@@ -374,7 +376,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		success, errMsg := fundAccount(tokenAccountID)
 		if !success {
 			balance, err := checkAccountBalance(tokenAccountID)
-			if err == nil && balance > 0 {
+			if err == nil && balance != "0" {
 				log.Println("Account has a positive balance, considering funding successful")
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -515,7 +517,7 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	client := &http.Client{}
 	fundRequest := FundAccountRequest{
 		Seed:   seed,
-		Amount: fundingAmount,
+		Amount: *fundingAmount,
 		To:     tokenAccountID,
 	}
 	requestBody, err := json.Marshal(fundRequest)
@@ -565,7 +567,7 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	if successErr == nil {
 		// If there is no error, then it was a success response
 		log.Printf("Funding successful: %+v\n", fundResponse)
-		return fundResponse.To == tokenAccountID && fmt.Sprintf("%d", fundResponse.Amount) == fmt.Sprintf("%d", fundingAmount), ""
+		return fundResponse.Account == tokenAccountID && fundResponse.Amount.String() == fundingAmount.String(), ""
 	}
 
 	// Attempt to decode the response into the error structure
