@@ -108,7 +108,7 @@ const (
 	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/set_balance"
 	balanceAPIURL  = "https://api.node3.functionyard.fula.network/account/balance"
 	userDetailFile = "userDetails.txt"
-	fundingAmount  = 99999999999999999999999999999
+	fundingAmount  = 999999999999999999999999999999
 )
 
 func checkAccountBalance(accountID string) (int64, error) {
