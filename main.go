@@ -535,6 +535,7 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	if err != nil {
 		log.Fatalf("Failed to marshal request: %v", err)
 	}
+	log.Println("Request body jsonData:", string(jsonData))
 	requestBody, err := json.Marshal(jsonData)
 	if err != nil {
 		log.Println("Error marshaling request:", err)
