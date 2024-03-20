@@ -525,6 +525,7 @@ func fundAccount(tokenAccountID string) (bool, string) {
 		log.Println("Error marshaling request:", err)
 		return false, fmt.Sprintf("Error marshaling request: %s", err.Error())
 	}
+	log.Println(requestBody)
 
 	resp, err := client.Post(fundAPIURL, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
