@@ -44,9 +44,9 @@ type OrderVerificationResponse struct {
 }
 
 type FundAccountRequest struct {
-	Seed   string  `json:"seed"`
-	Amount big.Int `json:"amount"`
-	To     string  `json:"to"`
+	Seed   string   `json:"seed"`
+	Amount *big.Int `json:"amount,omitempty"`
+	To     string   `json:"to"`
 }
 
 type FundAccountResponse struct {
@@ -111,6 +111,17 @@ const (
 )
 
 var fundingAmount *big.Int
+
+func (f FundAccountRequest) MarshalJSON() ([]byte, error) {
+	type Alias FundAccountRequest // Create an alias to avoid infinite recursion
+	return json.Marshal(&struct {
+		Amount json.Number `json:"amount"` // Use json.Number for the amount
+		*Alias
+	}{
+		Amount: json.Number(f.Amount.String()), // Convert big.Int to json.Number
+		Alias:  (*Alias)(&f),
+	})
+}
 
 func checkAccountBalance(accountID string) (string, error) {
 	client := &http.Client{}
@@ -517,10 +528,14 @@ func fundAccount(tokenAccountID string) (bool, string) {
 	client := &http.Client{}
 	fundRequest := FundAccountRequest{
 		Seed:   seed,
-		Amount: *fundingAmount,
+		Amount: fundingAmount,
 		To:     tokenAccountID,
 	}
-	requestBody, err := json.Marshal(fundRequest)
+	jsonData, err := json.Marshal(fundRequest)
+	if err != nil {
+		log.Fatalf("Failed to marshal request: %v", err)
+	}
+	requestBody, err := json.Marshal(jsonData)
 	if err != nil {
 		log.Println("Error marshaling request:", err)
 		return false, fmt.Sprintf("Error marshaling request: %s", err.Error())
