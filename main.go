@@ -531,17 +531,11 @@ func fundAccount(tokenAccountID string) (bool, string) {
 		Amount: fundingAmount,
 		To:     tokenAccountID,
 	}
-	jsonData, err := json.Marshal(fundRequest)
+	requestBody, err := json.Marshal(fundRequest)
 	if err != nil {
 		log.Fatalf("Failed to marshal request: %v", err)
 	}
-	log.Println("Request body jsonData:", string(jsonData))
-	requestBody, err := json.Marshal(jsonData)
-	if err != nil {
-		log.Println("Error marshaling request:", err)
-		return false, fmt.Sprintf("Error marshaling request: %s", err.Error())
-	}
-	log.Println("Request body:", string(requestBody))
+	log.Println("Request body jsonData:", string(requestBody))
 
 	resp, err := client.Post(fundAPIURL, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
