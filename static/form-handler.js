@@ -6,12 +6,6 @@ document.addEventListener("DOMContentLoaded", function() {
     let verifyingMessage = document.getElementById('verifyingMessage');
     let appIdSelect = document.getElementById('appId'); // Get the appId select element
 
-    // Automatically disable fields if appId is 'land.fx.fotos'
-    if (appIdSelect.value === 'land.fx.fotos') {
-        form.email.disabled = true;
-        form.orderId.disabled = true;
-        form.phoneNumber.disabled = true;
-    }
 
     // Add event listener to handle appId changes
     appIdSelect.addEventListener('change', function() {
@@ -84,6 +78,13 @@ document.addEventListener("DOMContentLoaded", function() {
         appIdSelect.value = appIdParam;
     } else {
         appIdSelect.value = 'main'; // Default to 'main' if not valid or not present
+    }
+
+    // Automatically disable fields if appId is 'land.fx.fotos'
+    if (appIdSelect.value === 'land.fx.fotos') {
+        form.email.disabled = true;
+        form.orderId.disabled = true;
+        form.phoneNumber.disabled = true;
     }
 
     // Automatically fill the tokenAccountId field if accountId is present in the URL
