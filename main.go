@@ -365,23 +365,30 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		orderFound, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount := verifyOrder(email, orderID, phoneNumber)
-		if !orderFound {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically or does not match what we have in our system. If your email is in the system you will shortly receive an email with registered order details. You can also contact testnet@fx.land"})
-			if emailFound {
-				err := sendEmailDetails(email, foundOrderNo, foundShippingPhone, foundOrderAmount)
-				log.Println("Email sending result")
-				log.Println(err)
+		// Skip verifyOrder and isOrderFunded checks if appId is "land.fx.fotos"
+		if appId == "land.fx.fotos" {
+			email = fmt.Sprintf("random_%d@example.com", time.Now().Unix())
+			orderID = fmt.Sprintf("order_%d", time.Now().Unix())
+			phoneNumber = fmt.Sprintf("555-1234-%d", time.Now().Unix()%10000)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			orderFound, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount := verifyOrder(email, orderID, phoneNumber)
+			if !orderFound {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically or does not match what we have in our system. If your email is in the system you will shortly receive an email with registered order details. You can also contact testnet@fx.land"})
+				if emailFound {
+					err := sendEmailDetails(email, foundOrderNo, foundShippingPhone, foundOrderAmount)
+					log.Println("Email sending result")
+					log.Println(err)
+				}
+				return
 			}
-			return
-		}
 
-		if isOrderFunded(orderID, appId) {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
-			return
+			if isOrderFunded(orderID, appId) {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
+				return
+			}
 		}
 
 		success, errMsg := fundAccount(tokenAccountID)

@@ -6,6 +6,26 @@ document.addEventListener("DOMContentLoaded", function() {
     let verifyingMessage = document.getElementById('verifyingMessage');
     let appIdSelect = document.getElementById('appId'); // Get the appId select element
 
+    // Automatically disable fields if appId is 'land.fx.fotos'
+    if (appIdSelect.value === 'land.fx.fotos') {
+        form.email.disabled = true;
+        form.orderId.disabled = true;
+        form.phoneNumber.disabled = true;
+    }
+
+    // Add event listener to handle appId changes
+    appIdSelect.addEventListener('change', function() {
+        if (appIdSelect.value === 'land.fx.fotos') {
+            form.email.disabled = true;
+            form.orderId.disabled = true;
+            form.phoneNumber.disabled = true;
+        } else {
+            form.email.disabled = false;
+            form.orderId.disabled = false;
+            form.phoneNumber.disabled = false;
+        }
+    });
+
     const rotatingMessages = [
         "Initiating blockchain handshake...",
         "Gathering quantum bits...",
