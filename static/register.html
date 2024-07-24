@@ -33,10 +33,22 @@
                 <select id="appId" name="appId" required>
                     <option value="main">Blox Account</option>
                     <option value="land.fx.fotos">FxFotos</option>
-                    <option value="land.fx.blox">FxBlox</option>
                 </select>
             </div>
-            <button type="submit">Join Testnet</button>
+            <div id="bloxOptions" class="form-group" style="display: none;">
+                <label for="bloxJoinType">Join Blox:</label>
+                <select id="bloxJoinType" name="bloxJoinType">
+                    <option value="myself">Myself</option>
+                    <option value="invite">Invite Others</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tokenAccountId">Token Account ID:</label>
+                <input type="text" id="tokenAccountId" name="tokenAccountId" required>
+            </div>
+            <button type="button" id="verifyNFT" style="display: none;">Join Testnet using NFT</button>
+            <br />
+            <button type="submit">Join Testnet Using Indiegogo</button>
         </form>
         <div id="successMessage" class="message success" style="display: none;"></div>
         <div id="errorMessage" class="message error" style="display: none;"></div>

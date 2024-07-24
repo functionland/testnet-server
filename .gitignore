@@ -23,5 +23,6 @@ go.work
 .history/*
 .tokens
 contributions.csv
+contributions-masked.csv
 userDetails.txt
 *.key

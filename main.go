@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -22,6 +23,7 @@ var (
 	apiToken      string
 	accessToken   string
 	cleanedOrders []OrderRecord
+	openSeaAPIKey string
 )
 
 type OrderRecord struct {
@@ -103,11 +105,20 @@ type ToEmail struct {
 	Name  string `json:"name"` // This can be an empty string if the name is not used
 }
 
+type OpenSeaResponse struct {
+	NFTs []struct {
+		Contract string `json:"contract"`
+	} `json:"nfts"`
+}
+
 const (
-	easyshipAPIURL = "https://api.easyship.com/2023-01/shipments?per_page=1&platform_order_number="
-	fundAPIURL     = "https://api.node3.functionyard.fula.network/account/set_balance"
-	balanceAPIURL  = "https://api.node3.functionyard.fula.network/account/balance"
-	userDetailFile = "userDetails.txt"
+	easyshipAPIURL  = "https://api.easyship.com/2023-01/shipments?per_page=1&platform_order_number="
+	fundAPIURL      = "https://api.node3.functionyard.fula.network/account/set_balance"
+	balanceAPIURL   = "https://api.node3.functionyard.fula.network/account/balance"
+	userDetailFile  = "userDetails.txt"
+	openSeaNFTId    = "functional-elephants-club"
+	contractAddress = "0xe44d2ce514fd50ffa3a296ee6ce01bb1ddb5b6d6"
+	chain           = "matic" // Assuming the NFT is on Polygon
 )
 
 var fundingAmount *big.Int
@@ -228,6 +239,27 @@ func readTokensFromFile(filename string) error {
 	return scanner.Err()
 }
 
+func verifyNFTHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var data struct {
+		Address string `json:"address"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Verify NFT ownership using Polygon API (you'll need to implement this)
+	hasNFT := verifyNFTOwnership(data.Address)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"hasNFT": hasNFT})
+}
+
 func init() {
 	var err error
 	cleanedOrders, err = readCSVOrders("contributions-masked.csv")
@@ -237,6 +269,15 @@ func init() {
 }
 
 func main() {
+	// Parse command-line flags
+	flag.StringVar(&openSeaAPIKey, "opensea-api", "", "OpenSea API key")
+	flag.Parse()
+
+	// Check if the OpenSea API key is provided
+	if openSeaAPIKey == "" {
+		log.Fatal("OpenSea API key is required. Please provide it using the --opensea-api flag.")
+	}
+
 	fmt.Print("Server Started")
 	fundingAmount, _ = new(big.Int).SetString("999999999999999999999999999999", 10)
 	err := readTokensFromFile(".tokens")
@@ -244,6 +285,8 @@ func main() {
 		log.Fatalf("Error reading tokens: %v", err)
 	}
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/verify-nft", verifyNFTHandler)
+	http.HandleFunc("/verify-nft-and-fund", verifyNFTAndFundHandler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", registerHandler)
 	log.Fatal(http.ListenAndServe(":9090", nil))
@@ -372,6 +415,15 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			phoneNumber = fmt.Sprintf("555-1234-%d", time.Now().Unix()%10000)
 		} else {
 			w.Header().Set("Content-Type", "application/json")
+			if appId == "main" {
+				// Check if the order has already funded 6 accounts
+				fundedAccounts := getFundedAccountsCount(orderID)
+				if fundedAccounts >= 6 {
+					w.WriteHeader(http.StatusBadRequest)
+					json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "This order has already funded the maximum number of accounts."})
+					return
+				}
+			}
 			orderFound, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount := verifyOrder(email, orderID, phoneNumber)
 			if !orderFound {
 				w.WriteHeader(http.StatusBadRequest)
@@ -411,6 +463,26 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Invalid request method"})
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func getFundedAccountsCount(orderID string) int {
+	file, err := os.Open(userDetailFile)
+	if err != nil {
+		log.Println("Error opening file:", err)
+		return 0
+	}
+	defer file.Close()
+
+	count := 0
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, ", ")
+		if len(parts) >= 2 && parts[1] == orderID {
+			count++
+		}
+	}
+	return count
 }
 
 //lint:ignore U1000 will be used in future
@@ -638,4 +710,106 @@ func isOrderFunded(orderID, appId string) bool {
 		}
 	}
 	return false
+}
+
+func verifyNFTOwnership(address string) bool {
+	url := fmt.Sprintf("https://api.opensea.io/api/v2/chain/%s/account/%s/nfts?collection=%s", chain, address, openSeaNFTId)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return false
+	}
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("x-api-key", openSeaAPIKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+		return false
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("API request failed with status code: %d\n", resp.StatusCode)
+		fmt.Println("Response body:", string(body))
+		return false
+	}
+
+	var openSeaResp OpenSeaResponse
+	err = json.Unmarshal(body, &openSeaResp)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return false
+	}
+
+	// Check if the user owns any NFTs from the specified contract
+	for _, nft := range openSeaResp.NFTs {
+		if nft.Contract == contractAddress {
+			return true
+		}
+	}
+
+	return false
+}
+
+func verifyNFTAndFundHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var data struct {
+		Address        string `json:"address"`
+		TokenAccountID string `json:"tokenAccountId"`
+		AppID          string `json:"appId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Verify NFT ownership
+	hasNFT := verifyNFTOwnership(data.Address)
+	if !hasNFT {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "NFT verification failed. You do not own the required NFT."})
+		return
+	}
+
+	// Check if the order (address in this case) is already funded
+	if isOrderFunded(data.Address, data.AppID) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
+		return
+	}
+
+	// Fund the account
+	success, errMsg := fundAccount(data.TokenAccountID)
+	if !success {
+		balance, err := checkAccountBalance(data.TokenAccountID)
+		if err == nil && balance != "0" {
+			log.Println("Account has a positive balance, considering funding successful")
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": errMsg})
+			return
+		}
+	}
+
+	// Save user details
+	saveUserDetails(data.Address, data.TokenAccountID, data.AppID)
+
+	// Send success response
+	w.WriteHeader(http.StatusOK)
+	response := map[string]string{"status": "success", "message": "Account is funded successfully"}
+	json.NewEncoder(w).Encode(response)
 }

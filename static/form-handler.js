@@ -5,10 +5,19 @@ document.addEventListener("DOMContentLoaded", function() {
     let errorMessage = document.getElementById('errorMessage');
     let verifyingMessage = document.getElementById('verifyingMessage');
     let appIdSelect = document.getElementById('appId'); // Get the appId select element
+    let bloxOptions = document.getElementById('bloxOptions');
+    let bloxJoinType = document.getElementById('bloxJoinType');
+    let verifyNFTButton = document.getElementById('verifyNFT');
 
 
-    // Add event listener to handle appId changes
-    appIdSelect.addEventListener('change', function() {
+    function setVisibleFields() {
+        if (appIdSelect.value === 'main') {
+            bloxOptions.style.display = 'block';
+            verifyNFTButton.style.display = 'block';
+        } else {
+            bloxOptions.style.display = 'none';
+            verifyNFTButton.style.display = 'none';
+        }
         if (appIdSelect.value === 'land.fx.fotos') {
             form.email.disabled = true;
             form.orderId.disabled = true;
@@ -17,6 +26,19 @@ document.addEventListener("DOMContentLoaded", function() {
             form.email.disabled = false;
             form.orderId.disabled = false;
             form.phoneNumber.disabled = false;
+        }
+    }
+    // Add event listener to handle appId changes
+    setVisibleFields();
+    appIdSelect.addEventListener('change', function() {
+        setVisibleFields();
+    });
+
+    bloxJoinType.addEventListener('change', function() {
+        if (bloxJoinType.value === 'myself') {
+            form.tokenAccountId.disabled = true;
+        } else {
+            form.tokenAccountId.disabled = false;
         }
     });
 
@@ -135,5 +157,46 @@ document.addEventListener("DOMContentLoaded", function() {
             errorMessage.style.display = 'block';
             submitButton.disabled = false; // Re-enable the button on fetch failure
         });
+    });
+
+    verifyNFTButton.addEventListener('click', async function() {
+        if (typeof window.ethereum !== 'undefined') {
+            try {
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const address = accounts[0];
+                const tokenAccountId = document.getElementById('tokenAccountId').value;
+                const appId = document.getElementById('appId').value;
+    
+                // Verify NFT ownership and fund account
+                const response = await fetch('/verify-nft-and-fund', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        address: address,
+                        tokenAccountId: tokenAccountId,
+                        appId: appId
+                    }),
+                });
+    
+                const result = await response.json();
+    
+                if (result.status === 'success') {
+                    successMessage.innerText = result.message;
+                    successMessage.style.display = 'block';
+                } else {
+                    errorMessage.innerText = result.message;
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.innerText = 'Error: ' + error.message;
+                errorMessage.style.display = 'block';
+            }
+        } else {
+            errorMessage.innerText = 'MetaMask is not installed. Please install MetaMask to verify NFT ownership.';
+            errorMessage.style.display = 'block';
+        }
     });
 });
