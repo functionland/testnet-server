@@ -25,7 +25,7 @@ Please make sure each entry is correctly placed under the corresponding column h
 In the same folder and then you can build or run it with go
 ```go
 go build -o testnet-server .
-testnet-server
+testnet-server --opensea-api xxxxxx
 ```
 
 and then an example service file `/etc/systemd/system/testnet-server.service` is like:
