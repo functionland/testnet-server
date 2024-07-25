@@ -436,9 +436,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if isOrderFunded(orderID, appId) {
+			if isOrderFunded(tokenAccountID, appId) {
 				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The order is already registered. If you think this is a mistake please contact testnet@fx.land"})
+				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "The account is already registered. If you think this is a mistake please contact testnet@fx.land"})
 				return
 			}
 		}
@@ -692,7 +692,7 @@ func saveUserDetails(orderID, tokenAccountID, appId string) {
 	}
 }
 
-func isOrderFunded(orderID, appId string) bool {
+func isOrderFunded(tokenAccountID, appId string) bool {
 	file, err := os.Open(userDetailFile)
 	if err != nil {
 		log.Println("Error opening file:", err)
@@ -705,7 +705,7 @@ func isOrderFunded(orderID, appId string) bool {
 		line := scanner.Text()
 		// Update parts length check for new format: "timestamp, orderID, tokenAccountID, appId"
 		parts := strings.Split(line, ", ")
-		if len(parts) >= 3 && parts[1] == orderID && parts[3] == appId {
+		if len(parts) >= 3 && parts[2] == tokenAccountID && parts[3] == appId {
 			return true
 		}
 	}
