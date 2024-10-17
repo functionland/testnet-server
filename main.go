@@ -119,7 +119,7 @@ const (
 	openSeaNFTId    = "functional-elephants-club"
 	contractAddress = "0xe44d2ce514fd50ffa3a296ee6ce01bb1ddb5b6d6"
 	chain           = "matic" // Assuming the NFT is on Polygon
-	streamrFile     = "/home/ubuntu/testnet-server/streamr.txt"
+	streamrFile     = "streamr.txt"
 )
 
 var fundingAmount *big.Int
@@ -888,7 +888,7 @@ func sendStreamrEmail(email, orderID, phoneNumber, streamrAccount string) error 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("API responded with non-OK status: %d", resp.StatusCode)
 	}
 
