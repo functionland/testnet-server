@@ -284,6 +284,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading tokens: %v", err)
 	}
+	http.HandleFunc("/streamr", streamrHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/verify-nft", verifyNFTHandler)
 	http.HandleFunc("/verify-nft-and-fund", verifyNFTAndFundHandler)
@@ -812,4 +813,145 @@ func verifyNFTAndFundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	response := map[string]string{"status": "success", "message": "Account is funded successfully"}
 	json.NewEncoder(w).Encode(response)
+}
+
+func accountExists(streamrAccount string) bool {
+	file, err := os.Open("streamr.txt")
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), streamrAccount) {
+			return true
+		}
+	}
+	return false
+}
+
+func sendStreamrEmail(email, orderID, phoneNumber, streamrAccount string) error {
+	apiKey, err := readAPIKey("/home/ubuntu/testnet-server/brevo.key")
+	if err != nil {
+		return err
+	}
+
+	apiURL := "https://api.brevo.com/v3/smtp/email"
+
+	htmlContent := fmt.Sprintf(`
+        <html><head></head><body>
+        <p>New Streamr node request:</p>
+        <ul>
+            <li>Email: %s</li>
+            <li>Order ID: %s</li>
+            <li>Phone Number: %s</li>
+            <li>Streamr Account: %s</li>
+        </ul>
+        </body></html>
+    `, email, orderID, phoneNumber, streamrAccount)
+
+	emailRequest := EmailRequest{
+		Sender: Sender{
+			Name:  "Functionyard",
+			Email: "functionyard@fula.network",
+		},
+		To: []ToEmail{
+			{
+				Email: "hi@fx.land",
+				Name:  "FX Land",
+			},
+		},
+		Subject:     "New Streamr node request",
+		HtmlContent: htmlContent,
+	}
+
+	payloadBytes, err := json.Marshal(emailRequest)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("api-key", apiKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API responded with non-OK status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func saveStreamrAccount(streamrAccount, orderID string) error {
+	file, err := os.OpenFile("streamr.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%s,%s\n", streamrAccount, orderID))
+	return err
+}
+func streamrHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.ServeFile(w, r, "static/streamr.html")
+		return
+	}
+
+	email := r.FormValue("email")
+	orderID := r.FormValue("orderId")
+	phoneNumber := r.FormValue("phoneNumber")
+	streamrAccount := r.FormValue("streamrAccount")
+
+	orderFound, emailFound, foundOrderNo, foundShippingPhone, foundOrderAmount := verifyOrder(email, orderID, phoneNumber)
+	if !orderFound {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Your order could not be found automatically or does not match what we have in our system. If your email is in the system you will shortly receive an email with registered order details. You can also contact testnet@fx.land"})
+		if emailFound {
+			err := sendEmailDetails(email, foundOrderNo, foundShippingPhone, foundOrderAmount)
+			log.Println("Email sending result")
+			log.Println(err)
+		}
+		return
+	}
+
+	// Check if streamrAccount already exists in streamr.txt
+	if accountExists(streamrAccount) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "This Streamr account is already registered."})
+		return
+	}
+
+	// Send email to hi@fx.land
+	err := sendStreamrEmail(email, orderID, phoneNumber, streamrAccount)
+	if err != nil {
+		log.Println("Error sending Streamr email:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Error processing your request. Please try again later."})
+		return
+	}
+
+	// Save streamrAccount and orderID to streamr.txt
+	err = saveStreamrAccount(streamrAccount, orderID)
+	if err != nil {
+		log.Println("Error saving Streamr account:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Error processing your request. Please try again later."})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Your Streamr node request has been submitted successfully."})
 }
