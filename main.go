@@ -119,6 +119,7 @@ const (
 	openSeaNFTId    = "functional-elephants-club"
 	contractAddress = "0xe44d2ce514fd50ffa3a296ee6ce01bb1ddb5b6d6"
 	chain           = "matic" // Assuming the NFT is on Polygon
+	streamrFile     = "/home/ubuntu/testnet-server/streamr.txt"
 )
 
 var fundingAmount *big.Int
@@ -816,7 +817,7 @@ func verifyNFTAndFundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func accountExists(streamrAccount string) bool {
-	file, err := os.Open("streamr.txt")
+	file, err := os.Open(streamrFile)
 	if err != nil {
 		return false
 	}
@@ -895,7 +896,7 @@ func sendStreamrEmail(email, orderID, phoneNumber, streamrAccount string) error 
 }
 
 func saveStreamrAccount(streamrAccount, orderID string) error {
-	file, err := os.OpenFile("streamr.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(streamrFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
