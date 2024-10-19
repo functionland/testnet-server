@@ -280,7 +280,6 @@ func main() {
 		log.Fatal("OpenSea API key is required. Please provide it using the --opensea-api flag.")
 	}
 
-	fmt.Print("Server Started")
 	log.Print("Server Started")
 	fundingAmount, _ = new(big.Int).SetString("999999999999999999999999999999", 10)
 	err := readTokensFromFile(".tokens")
@@ -586,6 +585,8 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 	foundOrderNo := ""
 	foundShippingPhone := ""
 	foundOrderAmount, _ := strconv.ParseFloat("0", 64)
+
+	log.Printf("verifyOrder", "sanitizedOrderID", sanitizedOrderID, "sanitizedEmail", sanitizedEmail, "sanitizedPhone", sanitizedPhone)
 
 	for _, order := range cleanedOrders {
 		if strings.EqualFold(order.Email, sanitizedEmail) {
