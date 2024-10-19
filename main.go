@@ -612,7 +612,8 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 	log.Printf("verifyOrder called. sanitizedOrderID: %s, sanitizedEmail: %s, sanitizedPhoneLast4: %s", sanitizedOrderID, sanitizedEmail, sanitizedPhoneLast4)
 
 	for _, order := range cleanedOrders {
-		if strings.EqualFold(order.Email, sanitizedEmail) {
+		sanitizedOrderEmail := sanitizeInput(order.Email)
+		if strings.EqualFold(sanitizedOrderEmail, sanitizedEmail) {
 			log.Print("email found")
 			emailFound = true // Email matches.
 			foundOrderNo = order.OrderNo
@@ -621,8 +622,10 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 			if len(order.ShippingPhone) < 4 {
 				continue
 			}
-			orderPhoneLast4 := order.ShippingPhone[len(order.ShippingPhone)-4:]
-			if strings.EqualFold(order.OrderNo, sanitizedOrderID) &&
+			sanitizedOrderNo := sanitizeInput(order.OrderNo)
+			sanitizedOrderPhone := sanitizeInput(order.ShippingPhone)
+			orderPhoneLast4 := order.ShippingPhone[len(sanitizedOrderPhone)-4:]
+			if strings.EqualFold(sanitizedOrderNo, sanitizedOrderID) &&
 				strings.EqualFold(orderPhoneLast4, sanitizedPhoneLast4) &&
 				order.Amount > 1 {
 				return true, true, foundOrderNo, foundShippingPhone, foundOrderAmount // Full match.
