@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 var (
@@ -582,12 +583,21 @@ func verifyOrderIgg(email, orderID, phoneNumber string) bool {
 
 	return false
 }
+func sanitizeInput(input string) string {
+	// Remove any non-printable characters except '@' for email
+	return strings.Map(func(r rune) rune {
+		if unicode.IsPrint(r) || r == '@' {
+			return r
+		}
+		return -1
+	}, strings.TrimSpace(input))
+}
 
 // Verifies the order by matching the user input against the parsed CSV records
 func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string, float64) {
-	sanitizedOrderID := strings.TrimSpace(orderID)
-	sanitizedEmail := strings.TrimSpace(email)
-	sanitizedPhone := strings.TrimSpace(phoneNumber)
+	sanitizedOrderID := sanitizeInput(orderID)
+	sanitizedEmail := sanitizeInput(email)
+	sanitizedPhone := sanitizeInput(phoneNumber)
 	if len(sanitizedPhone) < 4 {
 		// Handle error or adjust logic as necessary
 		return false, false, "", "", 0.0
@@ -602,7 +612,6 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 	log.Printf("verifyOrder called. sanitizedOrderID: %s, sanitizedEmail: %s, sanitizedPhoneLast4: %s", sanitizedOrderID, sanitizedEmail, sanitizedPhoneLast4)
 
 	for _, order := range cleanedOrders {
-		log.Printf("orders loop: order.Email:%s, sanitizedEmail:%s", order.Email, sanitizedEmail)
 		if strings.EqualFold(order.Email, sanitizedEmail) {
 			log.Print("email found")
 			emailFound = true // Email matches.
