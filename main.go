@@ -267,6 +267,19 @@ func init() {
 	if err != nil {
 		log.Fatalf("Error loading orders: %v", err)
 	}
+
+	// Log the first 3 orders
+	log.Println("First 3 orders:")
+	for i := 0; i < 3 && i < len(cleanedOrders); i++ {
+		log.Printf("%+v", cleanedOrders[i])
+	}
+
+	// Log the last 3 orders
+	log.Println("Last 3 orders:")
+	lastIndex := len(cleanedOrders) - 1
+	for i := lastIndex; i > lastIndex-3 && i >= 0; i-- {
+		log.Printf("%+v", cleanedOrders[i])
+	}
 }
 
 func main() {
@@ -586,7 +599,7 @@ func verifyOrder(email, orderID, phoneNumber string) (bool, bool, string, string
 	foundShippingPhone := ""
 	foundOrderAmount, _ := strconv.ParseFloat("0", 64)
 
-	log.Printf("verifyOrder", "sanitizedOrderID", sanitizedOrderID, "sanitizedEmail", sanitizedEmail, "sanitizedPhone", sanitizedPhone)
+	log.Printf("verifyOrder called. sanitizedOrderID: %s, sanitizedEmail: %s, sanitizedPhoneLast4: %s", sanitizedOrderID, sanitizedEmail, sanitizedPhoneLast4)
 
 	for _, order := range cleanedOrders {
 		if strings.EqualFold(order.Email, sanitizedEmail) {
