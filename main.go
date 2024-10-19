@@ -281,6 +281,7 @@ func main() {
 	}
 
 	fmt.Print("Server Started")
+	log.Print("Server Started")
 	fundingAmount, _ = new(big.Int).SetString("999999999999999999999999999999", 10)
 	err := readTokensFromFile(".tokens")
 	if err != nil {
