@@ -270,6 +270,7 @@ func init() {
 }
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	// Parse command-line flags
 	flag.StringVar(&openSeaAPIKey, "opensea-api", "", "OpenSea API key")
 	flag.Parse()
