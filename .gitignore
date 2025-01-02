@@ -26,3 +26,5 @@ contributions.csv
 contributions-masked.csv
 userDetails.txt
 *.key
+firebase.json
+streamr.txt
