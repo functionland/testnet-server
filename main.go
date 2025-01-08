@@ -318,7 +318,7 @@ func readAPIKey(filePath string) (string, error) {
 }
 
 func sendEmailDetails(toEmail string, orderID string, phoneNumber string, orderAmount float64) error {
-	apiKey, err := readAPIKey("/home/ubuntu/testnet-server/brevo.key")
+	apiKey, err := readAPIKey("./brevo.key")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -863,7 +863,7 @@ func accountExists(streamrAccount string) bool {
 }
 
 func sendStreamrEmail(email, orderID, phoneNumber, streamrAccount string) error {
-	apiKey, err := readAPIKey("/home/ubuntu/testnet-server/brevo.key")
+	apiKey, err := readAPIKey("./brevo.key")
 	if err != nil {
 		return err
 	}
