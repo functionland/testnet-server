@@ -410,7 +410,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		appId := r.FormValue("appId")
 
 		// Validate appId against the allowed list
-		allowedAppIds := []string{"land.fx.fotos", "land.fx.blox", "main"}
+		allowedAppIds := []string{"FulaMa", "land.fx.fotos", "land.fx.blox", "main"}
 		appIdValid := false
 		for _, a := range allowedAppIds {
 			if appId == a {
@@ -428,6 +428,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		// Skip verifyOrder and isOrderFunded checks if appId is "land.fx.fotos"
 		if appId == "land.fx.fotos" {
 			email = fmt.Sprintf("random_%d@example.com", time.Now().Unix())
+			orderID = fmt.Sprintf("order_%d", time.Now().Unix())
+			phoneNumber = fmt.Sprintf("555-1234-%d", time.Now().Unix()%10000)
+		} else if appId == "FulaMa" {
+			email = fmt.Sprintf("fulama_%d@fx.land", time.Now().Unix())
 			orderID = fmt.Sprintf("order_%d", time.Now().Unix())
 			phoneNumber = fmt.Sprintf("555-1234-%d", time.Now().Unix()%10000)
 		} else {

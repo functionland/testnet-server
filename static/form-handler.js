@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
             bloxOptions.style.display = 'none';
             verifyNFTButton.style.display = 'none';
         }
-        if (appIdSelect.value === 'land.fx.fotos') {
+        if (appIdSelect.value === 'land.fx.fotos' || appIdSelect.value === 'FulaMa') {
             form.email.disabled = true;
             form.orderId.disabled = true;
             form.phoneNumber.disabled = true;
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Automatically set the appId field based on URL parameter or default to "main"
     let appIdParam = getSearchParams('appId');
-    let validAppIds = ['land.fx.fotos', 'land.fx.blox', 'main']; // List of valid appIds
+    let validAppIds = ['FulaMa', 'land.fx.fotos', 'land.fx.blox', 'main']; // List of valid appIds
     if (appIdParam && validAppIds.includes(appIdParam)) {
         appIdSelect.value = appIdParam;
     } else {
@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Automatically disable fields if appId is 'land.fx.fotos'
-    if (appIdSelect.value === 'land.fx.fotos') {
+    if (appIdSelect.value === 'land.fx.fotos' || appIdSelect.value === 'FulaMa') {
         form.email.disabled = true;
         form.orderId.disabled = true;
         form.phoneNumber.disabled = true;
